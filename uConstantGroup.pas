@@ -4,7 +4,7 @@ interface
 
 uses
   System.SysUtils,
-  uParserValue;
+  uParserValue, uTextProc;
 
 type
   // Несчитаемое значение, переменная или константа
@@ -17,10 +17,13 @@ type
   strict private
     FPlacedValue: Double;
     FPlaced: Boolean;
-    function GetName: string;// Просто выдает Text
+    FValueStack: TValueStack;
+    function GetName: string;
+    procedure PlaceValue(const AValue: Double);// Просто выдает Text
   public
     property Name: string read GetName; // Название это по сути текст переменной
-    procedure PlaceValue(const AValue: Double);
+    property ValueStack: TValueStack read FValueStack write FValueStack;
+//    procedure PlaceValue(const AValue: Double);
     function Value: Double; override;
     constructor Create(const AValue: String); override;
   end;
@@ -56,10 +59,19 @@ end;
 
 function TVariable.Value: Double;
 begin
+  if FValueStack = Nil then
+    raise Exception.Create('На задан стек значений для математического выражения.');
+
+  if FValueStack.IsHere(Name) then
+  begin
+    Result := FValueStack[Name];
+  end else
+    raise Exception.Create('На задано значение переменной «' + Name + '»');
+{ Вариант кода для другой архитектуры. Но он не нужен.
   if FPlaced then
     Result := FPlacedValue
   else
-    raise Exception.Create('На задано значение переменной «' + Name + '»');
+    raise Exception.Create('На задано значение переменной «' + Name + '»');}
 end;
 
 { TDouble }

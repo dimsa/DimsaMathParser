@@ -3,7 +3,7 @@ unit uTextProc;
 interface
 
 uses
-  System.SysUtils, System.Generics.Collections;
+  System.SysUtils, System.Generics.Collections, uNamedList;
 
   function PosFromRight(const ASubStr, AStr: string; AOffset: Integer = 0): Integer;
   function PosFromLeft(const ASubStr, AStr: string;  AOffset: Integer = 1): Integer;
@@ -15,6 +15,8 @@ type
     Text: string;
     StartPos, EndPos: Integer;
   end;
+
+  TValueStack = class(TNamedList<Double>);
 
 implementation
 

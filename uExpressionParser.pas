@@ -5,16 +5,18 @@ interface
 uses
   System.SysUtils, System.StrUtils,
   Generics.Collections, System.RegularExpressions,
-  uTextProc, uParserValue;
+  uTextProc, uParserValue, uNamedList;
 
 type
   {Парсер выражений}
   TExpression = class(TValue)
   strict private
     FValues: TList<TValue>;
+    FValueStack: TValueStack; // Стек, откуда парсер берет значение переменных
     function LeftExp(APos: Integer): TValue; virtual;
     function RightExp(APos: Integer): TValue; virtual;
     function OuterBrackets: TList<TStrAndPos>; virtual;
+
   protected
     FExpression: String; // В отличие от оригинального текста не имеет лишних символов
     property Values: TList<TValue> read FValues; // Распарсенные значения, принадлежащие этому значению
@@ -26,10 +28,12 @@ type
     procedure ParseOuterFunctions; virtual; // Находит все функции
     procedure ParseOuterBrackets; virtual; // Находит все первые скобки
     procedure SetText(const Value: String); override;
+    function AddConstantValue(const AText: string; const ALeft, ARight: Integer): TValue; virtual; // Добавляет константу или переменную
     //function IsOperand(ch: Char): Boolean; virtual;
     //function DeepBrackets: TList<TStrAndPos>; virtual;
   public
     property Expression: string read FExpression; // Изменненый текст
+    property ValueStack: TValueStack read FValueStack write FValueStack;
     function Value: Double; override;
     constructor Create; override;
     destructor Destroy; override;
@@ -42,10 +46,29 @@ uses
 
 { TExpression }
 
+function TExpression.AddConstantValue(const AText: string; const ALeft, ARight: Integer): TValue;
+var
+  vTmp: TValue;
+begin
+  vTmp := TypeOfValue(AText).Create;
+  vTmp.Text := AText;
+  // Если это переменная, необходимо пополнить стек имён
+  if vTmp is TVariable then
+  begin
+    // Можно добавлять имена сразу, чтобы не было эксепшина, но это не будет работать
+    // FValueStack.Add(vTmp.Text, 0);
+    TVariable(vTmp).ValueStack := FValueStack;
+  end;
+  vTmp.BoundLeft := ALeft;
+  vTmp.BoundRight :=  ARight;
+  Result := vTmp;
+end;
+
 constructor TExpression.Create;
 begin
   inherited;
   FValues := TList<TValue>.Create;
+//  FValueStack := TValueStack.Create;
 end;
 
 procedure TExpression.DeleteSurfaceBrackets(var AText: String);
@@ -140,6 +163,7 @@ begin
     if Not IsBound(vList[i].StartPos) then
     begin
       vTmp := TExpression.Create;
+      vTmp.ValueStack :=Self.ValueStack;
       vTmp.BoundLeft := vList[i].StartPos;
       vTmp.BoundRight := vList[i].EndPos;
       vTmp.Text := Copy(Expression, vTmp.BoundLeft, vTmp.BoundRight - vTmp.BoundLeft + 1);
@@ -171,6 +195,7 @@ begin
        begin
          // Создаем найденную функцию
          vTmp := CFastFuncNames[j].Create;
+         vTmp.ValueStack :=Self.ValueStack;
          vTmp.BoundLeft := vList[i].StartPos - Length(CFuncNames[j]);
          vTmp.BoundRight := vList[i].EndPos;
          vTmp.Text := Copy(Expression, vTmp.BoundLeft, vTmp.BoundRight - vTmp.BoundLeft + 1);
@@ -200,10 +225,7 @@ begin
   // Если нет ни одного операнда, ни одной  функции, то создаем константу
   if Self.Values.Count <= 0 then
   begin
-    vTmp := TypeOfValue(FExpression).Create;
-    vTmp.Text := FExpression;
-    vTmp.BoundLeft := 1;
-    vTmp.BoundRight :=  Length(FExpression);
+    vTmp := AddConstantValue(FExpression, 1, Length(FExpression));
     Self.Values.Add(vTmp);
   end;
 
@@ -250,10 +272,7 @@ begin
     vLeft := vPos;
     vRight := APos;
     vText := Copy(FExpression, vLeft, vRight - vLeft + 1);
-    vTmp := TypeOfValue(vText).Create;
-    vTmp.Text := vText;
-    vTmp.BoundLeft := vLeft;
-    vTmp.BoundRight :=  vRight;
+    vTmp := AddConstantValue(vText, vLeft, vRight);
     Exit(vTmp);
   end;
 
@@ -264,10 +283,7 @@ begin
   vLeft := 1;
   vRight := APos;
   vText := Copy(FExpression, vLeft, vRight - vLeft + 1);
-  vTmp := TypeOfValue(vText).Create;
-  vTmp.Text := vText;
-  vTmp.BoundLeft := vLeft;
-  vTmp.BoundRight :=  vRight;
+  vTmp := AddConstantValue(vText, vLeft, vRight);
   Exit(vTmp);
 
 end;
@@ -302,10 +318,7 @@ begin
     vLeft := APos;
     vRight := vPos - 1;
     vText := Copy(FExpression, vLeft, vRight - vLeft + 1);
-    vTmp := TypeOfValue(vText).Create;
-    vTmp.Text := vText;
-    vTmp.BoundLeft := vLeft;
-    vTmp.BoundRight := vRight;
+    vTmp := AddConstantValue(vText, vLeft, vRight);
     Exit(vTmp);
   end;
 
@@ -316,10 +329,7 @@ begin
   vLeft := APos;
   vRight := Length(FExpression);
   vText := Copy(FExpression, vLeft, vRight - vLeft + 1);
-  vTmp := TypeOfValue(vText).Create;
-  vTmp.Text := vText;
-  vTmp.BoundLeft := vLeft;
-  vTmp.BoundRight :=  vRight;
+  vTmp := AddConstantValue(vText, vLeft, vRight);
   Exit(vTmp);
 end;
 
@@ -349,8 +359,7 @@ begin
     Result := TVariable
   else
     raise Exception.Create('Ошибка обработки переменной «'+ AText +'». Название не соответствует регулярному выражению '+ vPattern);
-
-    end;
+end;
 
 procedure TExpression.ParseOperands;
 var

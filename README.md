@@ -9,11 +9,17 @@ Using:<br />
 &emsp;uExpressionParser;<br />
 <b>var</b><br />
 &emsp;vExp: TExpression;<br />
+&emsp;vStack: TValueStack;<br />
 <b>Begin</b><br />
 &emsp;vExp := TExpression.Create;<br />
-&emsp;<i>// It can parse variables too. But now it is not done</i><br />
-&emsp;<i>// Также позволяет задавать переменные. Но пока он их парсит, но не задаёт)</i><br />
-&emsp;vExp := '2+4*(5*5-45*(8 / 1.6)+Sin(3.14 / 2))';<br />
+&emsp;<i>// It can parse variables too. If variables are not defined you will get exception</i><br />
+&emsp;<i>// Также позволяет задавать переменные. Если переменные не определены, вы получить эксепшн)</i><br />
+&emsp;vStack := TValueStack.Create;<br />
+&emsp;vStack.Add('big', 20);<br />
+&emsp;vStack.Add('small', 16);<br />
+&emsp;vExp.ValueStack := vStack;<br />
+&emsp;vExp := '2.5+4*(5*big-45*(8/sqrt(small)))';<br />
+&emsp;<i>// Ответ будет 42.5</i><br />
 &emsp;WriteLn(vExp.Value);<br />
 <b>End.</b><br />
 
