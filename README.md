@@ -5,10 +5,8 @@ Parser for Math Expression with easy adding of new functions and operands. Writt
 
 Using:<br />
 
-Using:
-
-Uses
-	uExpressionParser;
+Uses<br />
+	uExpressionParser;<br />
 var
 	vExp: TExpression;
 Begin
