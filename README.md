@@ -18,7 +18,7 @@ Using:<br />
 &emsp;vStack.Add('big', 20);<br />
 &emsp;vStack.Add('small', 16);<br />
 &emsp;vExp.ValueStack := vStack;<br />
-&emsp;vExp := '2.5+4*(5*big-45*(8/sqrt(small)))';<br />
+&emsp;vExp := '2.5 + 4 * (5 * big-45*(8/sqrt(small)))';<br />
 &emsp;<i>// Ответ будет 42.5</i><br />
 &emsp;WriteLn(vExp.Value);<br />
 <b>End.</b><br />
