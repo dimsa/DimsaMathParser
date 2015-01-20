@@ -16,8 +16,8 @@ type
     function LeftExp(APos: Integer): TValue; virtual;
     function RightExp(APos: Integer): TValue; virtual;
     function OuterBrackets: TList<TStrAndPos>; virtual;
-
   protected
+    FParsed: Boolean; // Показывает, отпарсино ли выражение.
     FExpression: String; // В отличие от оригинального текста не имеет лишних символов
     property Values: TList<TValue> read FValues; // Распарсенные значения, принадлежащие этому значению
     function IsBound(const APos: Integer): Boolean; virtual; // Используется родителем для уточнения, не попадает ли новое значение в границы одного из существующих
@@ -68,6 +68,7 @@ constructor TExpression.Create;
 begin
   inherited;
   FValues := TList<TValue>.Create;
+  FParsed := False;
 //  FValueStack := TValueStack.Create;
 end;
 
@@ -214,19 +215,22 @@ function TExpression.Value: Double;
 var
   vTmp: TValue;
 begin
-  // Находим все функции в первом уровне. Пример: sin(45+90)
-  ParseOuterFunctions;
-  // Все оставшиеся скобки верхнего уровня обрабатываем
-  ParseOuterBrackets;
-  // Делаем так, типа нету скобок и все значения первого уровня
-  // И парсим операнды
-  ParseOperands;
-
-  // Если нет ни одного операнда, ни одной  функции, то создаем константу
-  if Self.Values.Count <= 0 then
+  if Not FParsed then
   begin
-    vTmp := AddConstantValue(FExpression, 1, Length(FExpression));
-    Self.Values.Add(vTmp);
+    // Находим все функции в первом уровне. Пример: sin(45+90)
+    ParseOuterFunctions;
+    // Все оставшиеся скобки верхнего уровня обрабатываем
+    ParseOuterBrackets;
+    // Делаем так, типа нету скобок и все значения первого уровня
+    // И парсим операнды
+    ParseOperands;
+
+    // Если нет ни одного операнда, ни одной  функции, то создаем константу
+    if Self.Values.Count <= 0 then
+    begin
+      vTmp := AddConstantValue(FExpression, 1, Length(FExpression));
+      Self.Values.Add(vTmp);
+    end;
   end;
 
   Result := Self.Values[Self.Values.Count - 1].Value;    
@@ -337,6 +341,7 @@ procedure TExpression.SetText(const Value: String);
 begin
   inherited;
   FExpression := StringReplace(Text, ' ', '',[rfReplaceAll]);
+  FParsed := False;
   DeleteSurfaceBrackets(FExpression);
 end;
 

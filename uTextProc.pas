@@ -5,11 +5,10 @@ interface
 uses
   System.SysUtils, System.Generics.Collections, uNamedList;
 
-  function PosFromRight(const ASubStr, AStr: string; AOffset: Integer = 0): Integer;
-  function PosFromLeft(const ASubStr, AStr: string;  AOffset: Integer = 1): Integer;
-  function ListOfPos(const ASubstr, AStr: String): TList<Integer>;
-
 type
+
+  TStrArray = array of String;
+
   {Значения для быстрого доступа}
   TStrAndPos = record
     Text: string;
@@ -18,7 +17,44 @@ type
 
   TValueStack = class(TNamedList<Double>);
 
+  function PosFromRight(const ASubStr, AStr: string; AOffset: Integer = 0): Integer;
+  function PosFromLeft(const ASubStr, AStr: string;  AOffset: Integer = 1): Integer;
+  function ListOfPos(const ASubstr, AStr: String): TList<Integer>;
+  function ExplodeBy(s, s1: string): tStrArray; // Разбивает как в пхп
+
 implementation
+
+// Разбивает как в пхп
+function Explodeby(s, s1: string): tStrArray;
+var
+  i, ls1, ls, tempPos: integer;
+  st, newC: string;
+  res: tStrArray;
+Begin
+  ls1:=length(s1);
+  ls:=length(s);
+
+  tempPos := 1;
+  for i := 1 to ls do
+  begin
+    st := copy(s, i, ls1);
+    if st = s1 then
+    begin
+      newC := copy(s, tempPos, i - tempPos);
+      setlength(res, length(res) + 1);
+      res[high(res)] := newC;
+      tempPos := i + ls1;
+    end;
+  end;
+
+  if tempPos <= ls then
+  begin
+    setlength(res, length(res) + 1);
+    res[ high(res)] := copy(s, tempPos, ls - tempPos + 1);
+  end;
+
+  result := res;
+End;
 
 // Дает список поизиций вхождения подстроки
 function ListOfPos(const ASubstr, AStr: String): TList<Integer>;
